@@ -46,25 +46,11 @@ retriever = load_retriever(embedder)
 st.title("🌿 موسوعة الأعشاب الطبية")
 st.caption("نظام RAG عربي — اسأل عن أي عشبة أو مرض وهيتم الرد بناءً على 100 عشبة موثّقة فقط.")
 
-with st.sidebar:
-    st.header("⚙️ الإعدادات")
-    api_key = st.text_input(
-        "Groq API Key",
-        type="password",
-        value=st.secrets.get("GROQ_API_KEY", ""),
-        help="لو مش حاطط الميفتاح في secrets، تقدر تكتبه هنا مؤقتًا.",
-    )
-    top_k = st.slider("عدد الأعشاب المسترجعة", min_value=1, max_value=8, value=5)
-    alpha = st.slider(
-        "وزن البحث الدلالي (alpha)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.45,
-        step=0.05,
-        help="0 = بحث لفظي (مطابقة الكلمات) بالكامل، 1 = بحث دلالي (بالمعنى) بالكامل",
-    )
-    st.divider()
-    st.caption(f"عدد الأعشاب في الموسوعة: {len(retriever.df)}")
+# الإعدادات بتتاخد من secrets.toml (محليًا) أو Secrets (على Streamlit Cloud) تلقائيًا،
+# من غير ما تظهر للمستخدم في الواجهة.
+api_key = st.secrets.get("GROQ_API_KEY", "")
+top_k = 5
+alpha = 0.45
 
 query = st.text_input(
     "❓ اكتب سؤالك",
@@ -77,7 +63,7 @@ if ask:
     if not query.strip():
         st.warning("من فضلك اكتب سؤال أولاً.")
     elif not api_key:
-        st.error("محتاج تضيف Groq API Key من القائمة الجانبية عشان يقدر يولّد إجابة.")
+        st.error("مفيش GROQ_API_KEY متضاف في Secrets. أضيفه من إعدادات التطبيق على Streamlit (Manage app → Settings → Secrets).")
     else:
         with st.spinner("جاري البحث في الموسوعة..."):
             package = build_context_package(retriever, query, k=top_k, alpha=alpha)
