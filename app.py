@@ -253,6 +253,21 @@ RISK_LABELS = {
     "NORMAL": ("عادي", "badge-normal"),
 }
 
+# جملة الرفض القياسية اللي بيرجعها الموديل لما السياق مش كافي.
+# لازم تتطابق حرفيًا (أو جزء مميز منها) مع النص الفعلي المُستخدم في generation.py
+# الكلمات التي تدل أن الموديل لم يجد إجابة كافية من قاعدة المعرفة
+INSUFFICIENT_MARKERS = [
+    "لا تكفي",
+    "لا توجد معلومات كافية",
+    "لا توجد معلومات",
+    "لا أستطيع الإجابة",
+    "لا يمكنني الإجابة",
+    "لم أجد معلومات",
+    "غير موجود في الموسوعة",
+    "لا يوجد في المصادر",
+    "I don't know",
+    "not enough information",
+]
 if ask:
     if not query.strip():
         st.warning("من فضلك اكتب سؤال أولاً.")
@@ -276,24 +291,48 @@ if ask:
             unsafe_allow_html=True,
         )
 
-        if package["sources"]:
-            st.markdown('<div class="sources-title">📚 المصادر المسترجعة</div>', unsafe_allow_html=True)
-            for src in package["sources"]:
-                label, css_class = RISK_LABELS.get(src["risk"], RISK_LABELS["NORMAL"])
-                st.markdown(
-                    f"""
-                    <div class="source-card">
-                        <div>
-                            <div class="source-name">{src['herb_name']}</div>
-                            <div class="source-meta">درجة التطابق: {src['score']}</div>
-                        </div>
-                        <span class="badge {css_class}">{label}</span>
+      # التأكد أن الإجابة حقيقية وليست رسالة رفض من الموديل
+answer_text = result["answer"]
+
+answer_is_sufficient = not any(
+    marker.lower() in answer_text.lower()
+    for marker in INSUFFICIENT_MARKERS
+)
+
+# عرض المصادر فقط عند وجود إجابة صحيحة
+if package["sources"] and answer_is_sufficient:
+    st.markdown(
+        '<div class="sources-title">📚 المصادر المسترجعة</div>',
+        unsafe_allow_html=True
+    )
+
+    for src in package["sources"]:
+        label, css_class = RISK_LABELS.get(
+            src["risk"],
+            RISK_LABELS["NORMAL"]
+        )
+
+        st.markdown(
+            f"""
+            <div class="source-card">
+                <div>
+                    <div class="source-name">{src['herb_name']}</div>
+                    <div class="source-meta">
+                        درجة التطابق: {src['score']}
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.warning("لم يتم العثور على عشبة مرتبطة بالسؤال في الموسوعة.")
+                </div>
+                <span class="badge {css_class}">
+                    {label}
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+else:
+    # لا نعرض المصادر إذا لم توجد إجابة كافية
+    if not answer_is_sufficient:
+        st.info("لم أجد معلومات كافية للإجابة من الموسوعة.")
 
 st.markdown(
     """
