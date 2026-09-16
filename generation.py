@@ -10,6 +10,7 @@ generation.py
 openai/gpt-oss-20b
 """
 
+from typing import Optional
 from groq import Groq
 
 
@@ -37,7 +38,7 @@ DISCLAIMER = (
 def build_strict_prompt(
     query: str,
     context_text: str,
-) -> str | None:
+) -> Optional[str]:
 
     # لو مفيش سياق، مفيش داعي لاستدعاء الموديل
     if not context_text or not context_text.strip():
@@ -139,7 +140,6 @@ def generate_answer(
     # --------------------------------------------------------
 
     if prompt is None:
-
         return {
             "answer": (
                 "المعلومات المتاحة لا تكفي للإجابة على هذا السؤال "
