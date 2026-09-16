@@ -5,12 +5,8 @@ generation.py
 
 خطوة التوليد لتطبيق Arabic Herbal RAG
 باستخدام Groq API بدلًا من Ollama.
-
-الموديل المستخدم حاليًا:
-openai/gpt-oss-20b
 """
 
-from typing import Optional
 from groq import Groq
 
 
@@ -35,16 +31,12 @@ DISCLAIMER = (
 # بناء الـ Prompt
 # ============================================================
 
-def build_strict_prompt(
-    query: str,
-    context_text: str,
-) -> Optional[str]:
+def build_strict_prompt(query, context_text):
 
-    # لو مفيش سياق، مفيش داعي لاستدعاء الموديل
     if not context_text or not context_text.strip():
         return None
 
-    return f"""
+    prompt = f"""
 أنت مساعد متخصص في الأعشاب الطبية داخل موسوعة عربية.
 
 مهمتك هي الإجابة على سؤال المستخدم اعتمادًا فقط على
@@ -111,34 +103,24 @@ def build_strict_prompt(
 ------------------------------------------------------------
 الإجابة:
 ------------------------------------------------------------
-""".strip()
+"""
+
+    return prompt.strip()
 
 
 # ============================================================
 # توليد الإجابة باستخدام Groq
 # ============================================================
 
-def generate_answer(
-    query: str,
-    context_text: str,
-    api_key: str,
-    model: str = DEFAULT_MODEL,
-) -> dict:
+def generate_answer(query, context_text, api_key, model=DEFAULT_MODEL):
 
-    # --------------------------------------------------------
     # بناء الـ prompt
-    # --------------------------------------------------------
-
     prompt = build_strict_prompt(
         query=query,
-        context_text=context_text,
+        context_text=context_text
     )
 
-    # --------------------------------------------------------
     # في حالة عدم وجود سياق
-    # لا نستدعي Groq بدون داعٍ
-    # --------------------------------------------------------
-
     if prompt is None:
         return {
             "answer": (
@@ -146,37 +128,26 @@ def generate_answer(
                 "بدقة — لم يتم العثور على معلومات مرتبطة بالسؤال "
                 "في الموسوعة."
             ),
-            "disclaimer": DISCLAIMER,
+            "disclaimer": DISCLAIMER
         }
 
-    # --------------------------------------------------------
     # إنشاء Groq Client
-    # --------------------------------------------------------
+    client = Groq(api_key=api_key)
 
-    client = Groq(
-        api_key=api_key,
-    )
-
-    # --------------------------------------------------------
     # إرسال الطلب إلى Groq
-    # --------------------------------------------------------
-
     response = client.chat.completions.create(
         model=model,
         messages=[
             {
                 "role": "user",
-                "content": prompt,
+                "content": prompt
             }
         ],
         temperature=0,
-        max_tokens=800,
+        max_tokens=800
     )
 
-    # --------------------------------------------------------
     # استخراج الإجابة
-    # --------------------------------------------------------
-
     answer = response.choices[0].message.content
 
     # حماية إضافية في حالة رجوع None
@@ -186,12 +157,8 @@ def generate_answer(
             "السؤال بدقة."
         )
 
-    # --------------------------------------------------------
-    # النتيجة النهائية
-    # --------------------------------------------------------
-
     return {
         "answer": answer.strip(),
-        "disclaimer": DISCLAIMER,
+        "disclaimer": DISCLAIMER
     }
 ```
