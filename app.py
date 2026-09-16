@@ -1,23 +1,35 @@
 # -*- coding: utf-8 -*-
 """
 app.py
-تطبيق Streamlit لموسوعة الأعشاب الطبية — RAG عربي (BM25 + بحث دلالي + Groq للتوليد).
+
+تطبيق Streamlit لموسوعة الأعشاب الطبية
+RAG عربي (BM25 + بحث دلالي + Groq للتوليد).
 """
 
 import streamlit as st
-import pandas as pd
 
-from rag_core import build_herb_dataframe, HerbRetriever, build_context_package
+from rag_core import (
+    build_herb_dataframe,
+    HerbRetriever,
+    build_context_package,
+)
 from embedder import Embedder
 from generation import generate_answer
 
+
 DATA_PATH = "data/herbs_encyclopedia.txt"
+
+
+# ============================================================
+# إعدادات الصفحة
+# ============================================================
 
 st.set_page_config(
     page_title="موسوعة الأعشاب الطبية",
     page_icon="🌿",
     layout="centered",
 )
+
 
 # ============================================================
 # الهوية البصرية — خطوط + ألوان + بطاقات مخصصة
@@ -35,18 +47,28 @@ st.markdown(
 
     .stApp {
         background:
-            radial-gradient(circle at 12% 8%, rgba(76,107,79,0.06), transparent 40%),
-            radial-gradient(circle at 88% 92%, rgba(139,111,62,0.07), transparent 40%),
+            radial-gradient(
+                circle at 12% 8%,
+                rgba(76,107,79,0.06),
+                transparent 40%
+            ),
+            radial-gradient(
+                circle at 88% 92%,
+                rgba(139,111,62,0.07),
+                transparent 40%
+            ),
             #F7F3EA;
     }
 
     /* ===== الترويسة ===== */
+
     .herbal-hero {
         text-align: center;
         padding: 1.4rem 0 1rem 0;
         margin-bottom: 0.6rem;
         border-bottom: 1px solid #D9CFB0;
     }
+
     .herbal-hero h1 {
         font-family: 'Amiri', serif;
         font-weight: 700;
@@ -55,6 +77,7 @@ st.markdown(
         margin-bottom: 0.15rem;
         letter-spacing: 0.5px;
     }
+
     .herbal-hero p {
         font-family: 'Tajawal', sans-serif;
         font-weight: 400;
@@ -62,6 +85,7 @@ st.markdown(
         font-size: 1rem;
         margin-top: 0;
     }
+
     .herbal-divider {
         text-align: center;
         color: #8B6F3E;
@@ -72,6 +96,7 @@ st.markdown(
     }
 
     /* ===== مربع السؤال ===== */
+
     div[data-testid="stTextInput"] input {
         background-color: #FFFFFF;
         border: 1.5px solid #D9CFB0;
@@ -83,12 +108,14 @@ st.markdown(
         direction: rtl;
         text-align: right;
     }
+
     div[data-testid="stTextInput"] input:focus {
         border-color: #4C6B4F;
         box-shadow: 0 0 0 3px rgba(76,107,79,0.15);
     }
 
     /* ===== الزرار ===== */
+
     div[data-testid="stButton"] button {
         background: linear-gradient(135deg, #4C6B4F, #3B5540);
         color: #F7F3EA;
@@ -101,6 +128,7 @@ st.markdown(
         transition: transform 0.12s ease, box-shadow 0.12s ease;
         box-shadow: 0 3px 10px rgba(43,58,47,0.18);
     }
+
     div[data-testid="stButton"] button:hover {
         transform: translateY(-1px);
         box-shadow: 0 5px 14px rgba(43,58,47,0.25);
@@ -108,6 +136,7 @@ st.markdown(
     }
 
     /* ===== بطاقة الإجابة ===== */
+
     .answer-card {
         background: #FFFFFF;
         border: 1px solid #E4DCC8;
@@ -117,18 +146,23 @@ st.markdown(
         margin-top: 1.2rem;
         box-shadow: 0 2px 12px rgba(43,58,47,0.06);
     }
+
     .answer-card h3 {
         font-family: 'Amiri', serif;
         color: #2B3A2F;
         margin-top: 0;
         font-size: 1.35rem;
     }
-    .answer-card p, .answer-card div {
+
+    .answer-card p,
+    .answer-card div {
         font-family: 'Tajawal', sans-serif;
         color: #33402F;
         line-height: 2;
         font-size: 1.02rem;
     }
+
+    /* ===== تنبيه طبي ===== */
 
     .disclaimer-box {
         background: #EFE8D8;
@@ -141,12 +175,14 @@ st.markdown(
     }
 
     /* ===== بطاقات المصادر ===== */
+
     .sources-title {
         font-family: 'Amiri', serif;
         font-size: 1.25rem;
         color: #2B3A2F;
         margin: 1.6rem 0 0.7rem 0;
     }
+
     .source-card {
         background: #FFFFFF;
         border: 1px solid #E4DCC8;
@@ -158,16 +194,19 @@ st.markdown(
         align-items: center;
         gap: 0.8rem;
     }
+
     .source-name {
         font-family: 'Tajawal', sans-serif;
         font-weight: 700;
         color: #2B3A2F;
         font-size: 1rem;
     }
+
     .source-meta {
         color: #8A8071;
         font-size: 0.82rem;
     }
+
     .badge {
         display: inline-block;
         padding: 0.22rem 0.75rem;
@@ -176,20 +215,26 @@ st.markdown(
         font-weight: 700;
         white-space: nowrap;
     }
+
     .badge-high {
         background: #F7E4E0;
         color: #A13D2E;
     }
+
     .badge-caution {
         background: #F6ECD3;
         color: #92701F;
     }
+
     .badge-normal {
         background: #E4EDE3;
         color: #4C6B4F;
     }
 
-    footer, #MainMenu {visibility: hidden;}
+    footer,
+    #MainMenu {
+        visibility: hidden;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -197,7 +242,7 @@ st.markdown(
 
 
 # ============================================================
-# تحميل الموارد الثقيلة مرة واحدة فقط (تُخزَّن في الكاش)
+# تحميل الموارد الثقيلة مرة واحدة فقط
 # ============================================================
 
 @st.cache_resource(show_spinner="جاري تحميل موديل الفهم الدلالي...")
@@ -223,29 +268,52 @@ st.markdown(
     """
     <div class="herbal-hero">
         <h1>🌿 موسوعة الأعشاب الطبية</h1>
-        <p>مائة عشبة موثّقة — إجابات مبنية على المصدر فقط، بلا تخمين</p>
+        <p>
+            مائة عشبة موثّقة — إجابات مبنية على المصدر فقط، بلا تخمين
+        </p>
     </div>
-    <div class="herbal-divider">﹀ ﹀ ﹀</div>
+
+    <div class="herbal-divider">
+        ﹀ ﹀ ﹀
+    </div>
     """,
     unsafe_allow_html=True,
 )
 
 
 # ============================================================
-# الإعدادات (تُقرأ تلقائيًا من Secrets، بلا واجهة ظاهرة)
+# الإعدادات
+# تُقرأ تلقائيًا من Secrets، بلا واجهة ظاهرة
 # ============================================================
 
 api_key = st.secrets.get("GROQ_API_KEY", "")
+
 top_k = 5
 alpha = 0.45
 
+
+# ============================================================
+# إدخال السؤال
+# ============================================================
+
 query = st.text_input(
     "❓ اكتب سؤالك",
-    placeholder="مثال: ما فوائد البابونج؟ / علاج الأرق بالأعشاب / هل الحرمل آمن؟",
+    placeholder=(
+        "مثال: ما فوائد البابونج؟ / علاج الأرق بالأعشاب / هل الحرمل آمن؟"
+    ),
     label_visibility="collapsed",
 )
 
-ask = st.button("🔍  اسأل", type="primary", use_container_width=True)
+ask = st.button(
+    "🔍  اسأل",
+    type="primary",
+    use_container_width=True,
+)
+
+
+# ============================================================
+# رسائل عدم كفاية المعلومات
+# ============================================================
 
 RISK_LABELS = {
     "HIGH_RISK": ("⚠️ خطورة عالية", "badge-high"),
@@ -253,9 +321,10 @@ RISK_LABELS = {
     "NORMAL": ("عادي", "badge-normal"),
 }
 
-# جملة الرفض القياسية اللي بيرجعها الموديل لما السياق مش كافي.
-# لازم تتطابق حرفيًا (أو جزء مميز منها) مع النص الفعلي المُستخدم في generation.py
-# الكلمات التي تدل أن الموديل لم يجد إجابة كافية من قاعدة المعرفة
+
+# جمل الرفض القياسية التي قد يرجعها الموديل
+# عندما لا يكون السياق كافيًا للإجابة.
+
 INSUFFICIENT_MARKERS = [
     "لا تكفي",
     "لا توجد معلومات كافية",
@@ -268,76 +337,176 @@ INSUFFICIENT_MARKERS = [
     "I don't know",
     "not enough information",
 ]
-if ask:
-    if not query.strip():
-        st.warning("من فضلك اكتب سؤال أولاً.")
-    elif not api_key:
-        st.error("مفيش GROQ_API_KEY متضاف في Secrets. أضيفه من إعدادات التطبيق على Streamlit (Manage app → Settings → Secrets).")
-    else:
-        with st.spinner("جاري البحث في الموسوعة..."):
-            package = build_context_package(retriever, query, k=top_k, alpha=alpha)
 
+
+# ============================================================
+# تنفيذ السؤال
+# ============================================================
+
+if ask:
+
+    # --------------------------------------------------------
+    # التحقق من السؤال
+    # --------------------------------------------------------
+
+    if not query.strip():
+
+        st.warning("من فضلك اكتب سؤال أولاً.")
+
+    # --------------------------------------------------------
+    # التحقق من API Key
+    # --------------------------------------------------------
+
+    elif not api_key:
+
+        st.error(
+            "مفيش GROQ_API_KEY متضاف في Secrets. "
+            "أضيفه من إعدادات التطبيق على Streamlit "
+            "(Manage app → Settings → Secrets)."
+        )
+
+    # --------------------------------------------------------
+    # تنفيذ RAG + التوليد
+    # --------------------------------------------------------
+
+    else:
+
+        # البحث في قاعدة المعرفة
+        with st.spinner("جاري البحث في الموسوعة..."):
+
+            package = build_context_package(
+                retriever,
+                query,
+                k=top_k,
+                alpha=alpha,
+            )
+
+        # توليد الإجابة باستخدام Groq
         with st.spinner("جاري توليد الإجابة..."):
-            result = generate_answer(query, package["context_text"], api_key=api_key)
+
+            result = generate_answer(
+                query,
+                package["context_text"],
+                api_key=api_key,
+            )
+
+        # ----------------------------------------------------
+        # استخراج نص الإجابة
+        # ----------------------------------------------------
+
+        answer_text = result.get("answer", "")
+
+        # ----------------------------------------------------
+        # التحقق هل الإجابة كافية أم أنها رسالة رفض
+        # ----------------------------------------------------
+
+        answer_is_sufficient = not any(
+            marker.lower() in answer_text.lower()
+            for marker in INSUFFICIENT_MARKERS
+        )
+
+        # ----------------------------------------------------
+        # عرض الإجابة
+        # ----------------------------------------------------
 
         st.markdown(
             f"""
             <div class="answer-card">
                 <h3>📋 الإجابة</h3>
-                <div>{result['answer']}</div>
+                <div>{answer_text}</div>
             </div>
-            <div class="disclaimer-box">{result['disclaimer']}</div>
+
+            <div class="disclaimer-box">
+                {result.get("disclaimer", "")}
+            </div>
             """,
             unsafe_allow_html=True,
         )
 
-      # التأكد أن الإجابة حقيقية وليست رسالة رفض من الموديل
-answer_text = result["answer"]
+        # ----------------------------------------------------
+        # عرض المصادر فقط عند وجود إجابة كافية
+        # ----------------------------------------------------
 
-answer_is_sufficient = not any(
-    marker.lower() in answer_text.lower()
-    for marker in INSUFFICIENT_MARKERS
-)
+        if package.get("sources") and answer_is_sufficient:
 
-# عرض المصادر فقط عند وجود إجابة صحيحة
-if package["sources"] and answer_is_sufficient:
-    st.markdown(
-        '<div class="sources-title">📚 المصادر المسترجعة</div>',
-        unsafe_allow_html=True
-    )
+            st.markdown(
+                '<div class="sources-title">📚 المصادر المسترجعة</div>',
+                unsafe_allow_html=True,
+            )
 
-    for src in package["sources"]:
-        label, css_class = RISK_LABELS.get(
-            src["risk"],
-            RISK_LABELS["NORMAL"]
-        )
+            for src in package["sources"]:
 
-        st.markdown(
-            f"""
-            <div class="source-card">
-                <div>
-                    <div class="source-name">{src['herb_name']}</div>
-                    <div class="source-meta">
-                        درجة التطابق: {src['score']}
+                label, css_class = RISK_LABELS.get(
+                    src.get("risk"),
+                    RISK_LABELS["NORMAL"],
+                )
+
+                herb_name = src.get("herb_name", "غير معروف")
+                score = src.get("score", 0)
+
+                st.markdown(
+                    f"""
+                    <div class="source-card">
+
+                        <div>
+                            <div class="source-name">
+                                {herb_name}
+                            </div>
+
+                            <div class="source-meta">
+                                درجة التطابق: {score}
+                            </div>
+                        </div>
+
+                        <span class="badge {css_class}">
+                            {label}
+                        </span>
+
                     </div>
-                </div>
-                <span class="badge {css_class}">
-                    {label}
-                </span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-else:
-    # لا نعرض المصادر إذا لم توجد إجابة كافية
-    if not answer_is_sufficient:
-        st.info("لم أجد معلومات كافية للإجابة من الموسوعة.")
+        # ----------------------------------------------------
+        # لو لم تكن الإجابة كافية
+        # لا نعرض المصادر
+        # ----------------------------------------------------
+
+        elif not answer_is_sufficient:
+
+            st.info(
+                "لم أجد معلومات كافية للإجابة من الموسوعة."
+            )
+
+        # ----------------------------------------------------
+        # لو لم يتم العثور على مصادر مرتبطة
+        # ----------------------------------------------------
+
+        elif not package.get("sources"):
+
+            st.warning(
+                "لم يتم العثور على عشبة مرتبطة بالسؤال في الموسوعة."
+            )
+
+
+# ============================================================
+# الفاصل السفلي
+# ============================================================
 
 st.markdown(
     """
-    <div class="herbal-divider" style="margin-top:2.2rem;">﹀ ﹀ ﹀</div>
+    <div
+        class="herbal-divider"
+        style="margin-top:2.2rem;"
+    >
+        ﹀ ﹀ ﹀
+    </div>
     """,
     unsafe_allow_html=True,
 )
-st.caption("مبني على notebook: Arabic Herbal RAG — محوّل ليشتغل بدون Ollama، عبر Streamlit + Groq.")
+
+
+st.caption(
+    "مبني على notebook: Arabic Herbal RAG — "
+    "محوّل ليشتغل بدون Ollama، عبر Streamlit + Groq."
+)
