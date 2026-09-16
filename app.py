@@ -4,6 +4,9 @@ app.py
 
 تطبيق Streamlit لموسوعة الأعشاب الطبية
 RAG عربي (BM25 + بحث دلالي + Groq للتوليد).
+
+المصادر المسترجعة تُستخدم داخليًا في RAG
+ولا يتم عرضها للمستخدم.
 """
 
 import streamlit as st
@@ -174,63 +177,6 @@ st.markdown(
         font-size: 0.9rem;
     }
 
-    /* ===== بطاقات المصادر ===== */
-
-    .sources-title {
-        font-family: 'Amiri', serif;
-        font-size: 1.25rem;
-        color: #2B3A2F;
-        margin: 1.6rem 0 0.7rem 0;
-    }
-
-    .source-card {
-        background: #FFFFFF;
-        border: 1px solid #E4DCC8;
-        border-radius: 12px;
-        padding: 0.85rem 1.1rem;
-        margin-bottom: 0.6rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.8rem;
-    }
-
-    .source-name {
-        font-family: 'Tajawal', sans-serif;
-        font-weight: 700;
-        color: #2B3A2F;
-        font-size: 1rem;
-    }
-
-    .source-meta {
-        color: #8A8071;
-        font-size: 0.82rem;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 0.22rem 0.75rem;
-        border-radius: 999px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        white-space: nowrap;
-    }
-
-    .badge-high {
-        background: #F7E4E0;
-        color: #A13D2E;
-    }
-
-    .badge-caution {
-        background: #F6ECD3;
-        color: #92701F;
-    }
-
-    .badge-normal {
-        background: #E4EDE3;
-        color: #4C6B4F;
-    }
-
     footer,
     #MainMenu {
         visibility: hidden;
@@ -282,8 +228,8 @@ st.markdown(
 
 
 # ============================================================
-# الإعدادات
-# تُقرأ تلقائيًا من Secrets، بلا واجهة ظاهرة
+# إعدادات Groq
+# تُقرأ تلقائيًا من Secrets
 # ============================================================
 
 api_key = st.secrets.get("GROQ_API_KEY", "")
@@ -312,18 +258,8 @@ ask = st.button(
 
 
 # ============================================================
-# رسائل عدم كفاية المعلومات
+# جمل الرفض القياسية
 # ============================================================
-
-RISK_LABELS = {
-    "HIGH_RISK": ("⚠️ خطورة عالية", "badge-high"),
-    "CAUTION": ("تحذير", "badge-caution"),
-    "NORMAL": ("عادي", "badge-normal"),
-}
-
-
-# جمل الرفض القياسية التي قد يرجعها الموديل
-# عندما لا يكون السياق كافيًا للإجابة.
 
 INSUFFICIENT_MARKERS = [
     "لا تكفي",
@@ -372,6 +308,9 @@ if ask:
     else:
 
         # البحث في قاعدة المعرفة
+        # المصادر المسترجعة لا يتم عرضها للمستخدم،
+        # وإنما يتم استخدامها داخليًا لبناء الـ context.
+
         with st.spinner("جاري البحث في الموسوعة..."):
 
             package = build_context_package(
@@ -397,7 +336,7 @@ if ask:
         answer_text = result.get("answer", "")
 
         # ----------------------------------------------------
-        # التحقق هل الإجابة كافية أم أنها رسالة رفض
+        # التحقق هل الإجابة كافية أم رسالة رفض
         # ----------------------------------------------------
 
         answer_is_sufficient = not any(
@@ -424,62 +363,17 @@ if ask:
         )
 
         # ----------------------------------------------------
-        # عرض المصادر فقط عند وجود إجابة كافية
+        # عند عدم كفاية المعلومات
         # ----------------------------------------------------
 
-        if package.get("sources") and answer_is_sufficient:
-
-            st.markdown(
-                '<div class="sources-title">📚 المصادر المسترجعة</div>',
-                unsafe_allow_html=True,
-            )
-
-            for src in package["sources"]:
-
-                label, css_class = RISK_LABELS.get(
-                    src.get("risk"),
-                    RISK_LABELS["NORMAL"],
-                )
-
-                herb_name = src.get("herb_name", "غير معروف")
-                score = src.get("score", 0)
-
-                st.markdown(
-                    f"""
-                    <div class="source-card">
-
-                        <div>
-                            <div class="source-name">
-                                {herb_name}
-                            </div>
-
-                            <div class="source-meta">
-                                درجة التطابق: {score}
-                            </div>
-                        </div>
-
-                        <span class="badge {css_class}">
-                            {label}
-                        </span>
-
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-        # ----------------------------------------------------
-        # لو لم تكن الإجابة كافية
-        # لا نعرض المصادر
-        # ----------------------------------------------------
-
-        elif not answer_is_sufficient:
+        if not answer_is_sufficient:
 
             st.info(
                 "لم أجد معلومات كافية للإجابة من الموسوعة."
             )
 
         # ----------------------------------------------------
-        # لو لم يتم العثور على مصادر مرتبطة
+        # لا توجد نتائج مرتبطة بالسؤال
         # ----------------------------------------------------
 
         elif not package.get("sources"):
