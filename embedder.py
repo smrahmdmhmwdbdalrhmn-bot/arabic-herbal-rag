@@ -1,4 +1,3 @@
-```python
 # -*- coding: utf-8 -*-
 """
 embedder.py
@@ -42,4 +41,3 @@ class Embedder:
             vectors,
             dtype="float32"
         )
-```
