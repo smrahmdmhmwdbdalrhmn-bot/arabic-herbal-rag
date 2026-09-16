@@ -1,4 +1,3 @@
-```python
 # -*- coding: utf-8 -*-
 
 from groq import Groq
@@ -36,4 +35,3 @@ def generate_answer(query, context_text, api_key, model=DEFAULT_MODEL):
         "answer": answer.strip(),
         "disclaimer": DISCLAIMER,
     }
-```
